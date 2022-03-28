@@ -1,0 +1,164 @@
+---
+
+- name: Replace the DATABASE HOST in the settings.ini file
+  lineinfile:
+    path: /linuxjobber/settings.ini
+    regexp: "DATABASE_HOST = "
+    line: "DATABASE_HOST = {{db_hostname}}"
+
+- name: pull specified branch of linuxjobber code from repo
+  become: yes
+  git:
+    repo: https://{{ gitlabpublicuser | urlencode }}:{{ gitlabpublicpassword | urlencode }}@gitlab.com/showpopulous/linuxjobber2.git
+    dest: /linuxjobber/www
+    version: "{{ gitlab_branch }}"
+
+- name: Recursively change ownership of /web directory
+  file:
+    path: /linuxjobber/
+    state: directory
+    recurse: yes
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: remove existing docker-py
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+  - { name: docker }
+  - { name: docker-py }
+
+- name: upgrade docker-py so that redis image can pull
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: present
+  with_items:
+  - { name: docker-py }
+
+# this stanza should be replaced with swarm rolling updates instead of removing containers 
+- name: remove existing chatscrum container
+  docker_container:
+    name: cs1_instance
+    state: absent
+  become: yes
+
+# I don't know the correct database name at this time
+- name: ensure database is up so that we can link
+  docker_container:
+    image: mysql:8
+    name: ljdb
+    state: started
+    restart: yes
+  become: yes
+
+# build angular distribution files for both Linuxjobber and Workntutor
+- name: Install "angular cli" node.js package globally.
+ become: yes
+ npm:
+   executable: /usr/local/node-v12.18.4-linux-x64/bin/npm
+   name: "{{ item.name }}"
+   #name: '@angular/cli'
+   global: yes
+ with_items:
+ - { name: '@angular/cli' }
+ - { name: '@angular-devkit/build-angular' }
+ - { name: '@angular/compiler-cli' }
+
+- name: install  angular custom-webpack in Angular directory
+ command: npm install --save @angular-builders/custom-webpack
+ args:
+   chdir: /linuxjobber/www/Angular
+
+- name: install  angular custom-webpack in Workntutor directory
+ command: npm install --save @angular-builders/custom-webpack
+ args:
+   chdir: /linuxjobber/www/Workntutor
+
+
+- name: Install npm in both angular and workntutor
+  command: npm install 
+  args:
+    chdir: "{{ item.name }}"
+  with_items:
+  - { name: '/linuxjobber/www/Workntutor' }
+  - { name: '/linuxjobber/www/Angular' }
+
+- name: copy environment configuration file to Workntutor directory
+  copy:
+    src: environment.prod.ts
+    dest: /linuxjobber/www/Workntutor/src/environments/environment.prod.ts
+    owner: linuxjobber
+    group: linuxjobber
+
+
+- name: setting environment variable for NG_CLI_ANALYTICS to false so that operation is non-interative
+  command: echo $NG_CLI_ANALYTICS
+  environment:
+    NG_CLI_ANALYTICS: false
+
+- name: Update version of local angular cli to version 9 only for workntutor project (version9.0.1 is faulty)
+  command: npm i @angular/cli@9
+  environment:
+    NG_CLI_ANALYTICS: false
+  args:
+    chdir: /linuxjobber/www/Workntutor
+
+# - name: Build Linuxjobber angular distribution files
+#   command: npm run build
+#   args:
+#     chdir: /linuxjobber/www/Angular
+
+# ### The config here is useful but I have to comment it temporarily because it takes too long to build 
+# ### which causes ansible to hang up and the rest of the script won't run.
+# ### you must put the below back
+# - name: Build WorknTutor angular distribution files
+#   environment:
+#     NG_CLI_ANALYTICS: false
+#   command: npm run build-prod
+#   args:
+#     chdir: /linuxjobber/www/Workntutor
+
+### End of useful script
+#  cd /linuxjobber/www/Workntutor/
+#  /usr/local/node-v12.18.4-linux-x64/bin/npm install @angular/animations --save
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install @angular/animations --save
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install @angular/material --save
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install @angular/cdk --save
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install sass-loader sass webpack --save-dev
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install --save-dev webpack webpack-cli html-webpack-plugin webpack-dev-server
+#  sudo rm -rf package-lock.json 
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install
+#  sudo rm -rf package-lock.json 
+#  sudo rm -rf node_modules/
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install
+#  sudo rm -rf node_modules/
+#  sudo rm -rf package-lock.json 
+#  /usr/local/node-v12.18.4-linux-x64/bin/npm cache clean -f
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm install
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm update
+#  sudo /usr/local/node-v12.18.4-linux-x64/bin/npm update @angular/cli --save
+#  /usr/local/node-v12.18.4-linux-x64/bin/ng build --prod --aot=true
+
+
+#this is the correct setting for registry. Linuxjobber uses gitlab instead of dockerio registry
+- name: Log into docker registry
+  docker_login:
+    registry: "{{ registry_build_path }}"
+    username: "{{ gitlab_registry_user }}"
+    password: "{{ gitlab_registry_user_password }}"
+  become: yes
+
+- name: build new docker image for linuxjobber
+  become: yes
+  docker_image: 
+    build:
+      path: /linuxjobber
+    name: "{{ registry_build_path }}"
+    tag: "{{ registry_build_tag }}"
+    push: yes
+    source: build 
+    force: yes
+    state: present

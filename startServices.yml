@@ -1,0 +1,14 @@
+---
+
+- name: Start service docker, if not started
+  service:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Start service nginx, if not started
+  service:
+    name: nginx
+    state: started
+  become: yes

@@ -1,0 +1,11 @@
+---
+
+- include_tasks: makeDirectories.yml
+
+- include_tasks: copyConfigFiles.yml
+
+- include_tasks: installPackages.yml
+
+- include_tasks: buildPushImage.yml
+
+

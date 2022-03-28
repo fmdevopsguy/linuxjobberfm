@@ -1,0 +1,10 @@
+---
+
+- name: Add linuxjobber user if not exist
+  user:
+    name: linuxjobber
+    shell: /bin/bash
+    groups: admins,wheel
+    append: yes
+    become_user: centos
+    become: yes

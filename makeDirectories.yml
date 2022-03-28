@@ -1,0 +1,72 @@
+---
+
+- name: Creates the /linuxjobber dir if not exist
+  file: 
+    path: /linuxjobber 
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+
+- name: Remove www dir if exist, we want fresh build every time
+  file:
+    path: /linuxjobber/www
+    state: absent
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Creates new www dir
+  file:
+    path: /linuxjobber/www
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Creates the sites-available if not exist
+  file: 
+    path: /etc/nginx/sites-available
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create the scripts dir for custom scripts if not exist
+  file:
+    path: /opt/scripts
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create the dir for aws credentials if not exist
+  file:
+    path: /home/linuxjobber/.aws
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create the tools dir if not exist
+  file:
+    path: /tools/tool
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create the oldtools dir if not exist
+  file:
+    path: /oldtools
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create the tools dir in linuxjobber home to store credentials, if not exist
+  file:
+    path: /home/linuxjobber/tools
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber
+
+- name: Create config dir to store credentials for oldtools, if not exist
+  file:
+    path: /home/linuxjobber/config
+    state: directory
+    owner: linuxjobber
+    group: linuxjobber

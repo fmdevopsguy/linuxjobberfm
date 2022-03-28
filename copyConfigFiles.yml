@@ -1,0 +1,18 @@
+---
+
+- name: copy config file for building on linuxjobber webserver
+  copy: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - { src: 'start.sh', dest: '/linuxjobber/start.sh', force: 'yes' }
+    - { src: 'settings.py', dest: '/linuxjobber/settings.py', force: 'yes' }
+    - { src: 'linuxjobber.ini', dest: '/linuxjobber/linuxjobber.ini', force: 'yes' }
+    - { src: 'backup.sh', dest: '/linuxjobber/backup.sh', force: 'yes' }
+    - { src: 'settings.ini', dest: '/linuxjobber/settings.ini', force: 'yes' }
+    - { src: 'container.nginx.conf', dest: '/linuxjobber/container.nginx.conf', force: 'yes' }
+    - { src: 'host.nginx.workntutor.com.conf', dest: '/linuxjobber/host.nginx.workntutor.com.conf', force: 'yes' }
+    - { src: 'Dockerfile', dest: '/linuxjobber/Dockerfile', force: 'yes' }
+    - { src: 'package.json', dest: '/linuxjobber/package.json', force: 'yes' }
+    - { src: 'environment.ts', dest: '/linuxjobber/environment.ts', force: 'yes' }
+    - { src: 'environment.stage.ts', dest: '/linuxjobber/environment.stage.ts', force: 'yes' }
+    - { src: 'environment.prod.ts', dest: '/linuxjobber/environment.prod.ts', force: 'yes' }
+    - { src: 'requirement.txt', dest: '/linuxjobber/requirement.txt', force: 'yes' }

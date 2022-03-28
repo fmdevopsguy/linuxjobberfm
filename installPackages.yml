@@ -1,0 +1,87 @@
+---
+
+- name: install epel
+  yum:
+    name: epel-release
+    state: present
+  become: yes
+
+- name: download nodejs
+  unarchive:
+    src: https://nodejs.org/dist/v12.18.4/node-v12.18.4-linux-x64.tar.xz
+    dest: /usr/local
+    remote_src: yes
+
+#- name: download and unarchive a nodejs
+#  command: curl -sL https://rpm.nodesource.com/setup_12.x | sudo -E bash -
+#  become: yes
+
+- name: install all packages available in yum repo
+  become: yes
+  yum:
+    name: "{{ item.name }}"
+    state: present
+  with_items:
+  - { name: git }
+  - { name: nodejs }
+
+- name: rewire npm to use the newer version, not the old one built with yum
+  become: yes
+  file:
+    src: /usr/local/node-v12.18.4-linux-x64/bin/npm
+    dest: /usr/bin/npm
+    owner: linuxjobber
+    group: linuxjobber
+    state: link
+
+- name: rewire node to use the newer version, not the old one built with yum
+  become: yes
+  file:
+    src: /usr/local/node-v12.18.4-linux-x64/bin/node
+    dest: /usr/bin/node
+    owner: linuxjobber
+    group: linuxjobber
+    state: link
+    force: yes
+
+#- name: install git
+#  yum:
+#    name: git
+#    state: present
+#  become: yes
+
+- name: install  nginx
+  yum:
+    name: nginx
+    state: present
+  become: yes
+
+# use devicemapper instead of overlay
+- name: install docker
+  yum:
+    name: docker
+    state: present
+  become: yes
+
+- name: install pip
+  yum:    
+    name: python-pip
+    state: present
+  become: yes
+
+- name: remove existing docker-py 
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+  - { name: docker-py }
+
+- name: install certain python modules for docker
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: present
+  with_items:
+  - { name: docker==2.6 }
+  - { name: docker-py }

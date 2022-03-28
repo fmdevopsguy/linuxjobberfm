@@ -1,0 +1,126 @@
+---
+
+#- name: get lastest chatscrum image
+#  docker_image:
+#    name: docker.io/showpopulous/chatscrum_img_base2:basev2 
+#  become: yes
+
+
+- name: remove existing docker-py
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: absent
+  with_items:
+  - { name: docker }
+  - { name: docker-py }
+
+- name: upgrade docker-py so that redis image can pull
+  become: yes
+  pip:
+    name: "{{ item.name }}"
+    state: present
+  with_items:
+  - { name: docker-py }
+
+
+- name: remove existing chatscrum container
+  docker_container:
+    name: cs1_instance
+    state: absent
+  become: yes
+
+- name: ensure database is up so that we can link
+  docker_container:
+    image: mysql:8
+    name: ljdb
+    state: started
+    restart: yes
+  become: yes
+
+#this is the correct setting for registry
+- name: Log into docker registry
+  docker_login:
+    registry: "{{ registry_build_tag }}"
+    username: "{{ dockerio_registry_user }}"
+    password: "{{ dockerio_registry_user_password }}"
+  become: yes
+
+- name: Restart a container
+  docker_container:
+    recreate: yes
+    name: cs1_instance
+    image: "{{ registry_build_tag }}"
+    state: started
+    restart: yes
+    links:
+      - "lj_db"
+    ports:
+      - "5000:5000"
+      - "5100:5100"
+    env:
+      SESSION_DEFAULTS: "database"
+  become: yes
+
+##this is the wrong setting for registry
+#- name: Log into docker registry
+#  docker_login:
+#    registry: docker.io/oluwaseyip/chatscrum
+#    username: "{{ dockerio_registry_user }}"
+#    password: "{{ dockerio_registry_user_password }}"
+#  become: yes
+
+#- name: Restart a container
+#  docker_container:
+#    recreate: yes
+#    name: cs
+#    image: docker.io/oluwaseyip/chatscrum:latest
+#    state: started
+#    restart: yes
+#    links:
+#      - "lj_db"
+#    ports:
+#      - "5000:5000"
+#      - "5100:5100"
+#    env:
+#      SESSION_DEFAULTS: "database"
+#  become: yes
+
+#- name: pull chatscrum code into /web/www
+#  git:
+#    repo=https://{{ githubuser | urlencode }}:{{ githubpassword | urlencode }}@gitlab.com/showpopulous/scrumastr.git
+#    dest=/web/www
+
+#- name: Restart a container
+#  docker_container:
+#    recreate: yes
+#    name: cs
+#    image: docker.io/showpopulous/chatscrum:latest
+#    state: started
+#    restart: yes
+#    links:
+#      - "lj_db"
+#    ports:
+#      - "5000:5000"
+#      - "5100:5100"
+#    env:
+#      SESSION_DEFAULTS: "database"
+#  become: yes
+
+#- name: upgrade docker-py so that redis image can pull
+#  become: yes
+#  pip:
+#    name: "{{ item.name }}"
+#    state: present
+#  with_items:
+#  - { name: docker>=2.6.1 }
+
+#- name: Restart a container
+#  docker_container:
+#    name: redis
+#    image: redis:2.8
+#    state: started
+#    restart: yes
+#    ports:
+#     - "6379:6379"
+#  become: yes
